@@ -9,8 +9,10 @@ contract CryptoJones {
     int256[20] prizeCards;
     int256[30] public desk;
     mapping(address => bool) players;
-    mapping(string => uint128) appearedCards;
-    uint128 remainingCards = 30;
+    address[] activePlayers;
+    uint128 numberActivePlayers = 0;
+    mapping(int256 => int256) appearedCards;
+    uint128 round = 0;
     bool gameStarted = false;
     
     constructor(uint256 _price) public{
@@ -77,20 +79,36 @@ contract CryptoJones {
         if (contains(msg.sender)) { revert("You are already in the game"); }
         if (msg.value != price) { revert("You can't pay that. Check the price and try again"); }
         players[msg.sender] = true;
+        activePlayers.push(msg.sender);
+        numberActivePlayers++;
     }
     
     function finishGame() private {
         
     }
     
-    function drawCard() public {
-        uint256 randomNumber = uint256(keccak256(abi.encodePacked(now))) % (remainingCards - 1);
-        /*appearedCards[desk[randomNumber]]++;
-        if (appearedCards[desk[randomNumber]] == 3) {
-            finishGame();
+    function splitPrize (int256 prize) internal {
+        uint256 amountToTransfer = uint256(prize/numberActivePlayers);
+        for (uint256 i = 0; i < activePlayers.length; i++) {
+            if (activePlayers[i] != 0) {
+                activePlayers[i].transfer(amountToTransfer);
+            }
         }
-        desk[randomNumber] = desk[remainingCards-1]; 
-        remainingCards--;*/
+    }
+    
+    function drawCard() public returns (int256) {
+        //TODO instead of create the desk randomly, extract card randomly
+        int256 card = desk[round];
+        if (card < 0 ){
+            appearedCards[card]++;
+            if (appearedCards[card] == 3) {
+                finishGame();
+            }
+        } else {
+            splitPrize(desk[round]);
+        }
+        round++;
+        return card;
     }
     
     function totalBalance() public view returns (uint) {
