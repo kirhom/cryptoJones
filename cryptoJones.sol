@@ -9,6 +9,7 @@ contract CryptoJones {
     int256[20] prizeCards;
     int256[30] public desk;
     mapping(address => bool) players;
+    mapping(address => int256) playerEarnings;
     address[] activePlayers;
     uint128 numberActivePlayers = 0;
     mapping(int256 => int256) appearedCards;
@@ -79,19 +80,34 @@ contract CryptoJones {
         if (contains(msg.sender)) { revert("You are already in the game"); }
         if (msg.value != price) { revert("You can't pay that. Check the price and try again"); }
         players[msg.sender] = true;
+        playerEarnings[msg.sender] = 0;
         activePlayers.push(msg.sender);
         numberActivePlayers++;
     }
     
+    function retire() public {
+        for (uint256 i = 0; i < activePlayers.length; i++) {
+            if (msg.sender == activePlayers[i]){
+                activePlayers[i].transfer(uint256(playerEarnings[activePlayers[i]]));
+                delete activePlayers[i];
+                numberActivePlayers--;
+            }
+        }
+    }
+    
     function finishGame() private {
-        
+        for (uint256 i = 0; i < activePlayers.length; i++) {
+            if (activePlayers[i] != 0) {
+                playerEarnings[activePlayers[i]] = 0;
+            }
+        }
     }
     
     function splitPrize (int256 prize) internal {
-        uint256 amountToTransfer = uint256(prize/numberActivePlayers);
+        int256 amountToTransfer = int256(prize/numberActivePlayers);
         for (uint256 i = 0; i < activePlayers.length; i++) {
             if (activePlayers[i] != 0) {
-                activePlayers[i].transfer(amountToTransfer);
+                playerEarnings[activePlayers[i]] = playerEarnings[activePlayers[i]] + amountToTransfer;
             }
         }
     }
