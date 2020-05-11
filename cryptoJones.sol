@@ -10,14 +10,24 @@ contract CryptoJones {
     int256[30] public desk;
     mapping(address => bool) players;
     mapping(address => int256) playerEarnings;
+    mapping(address => uint8) playerDecision; //0 -> don't continue, 1 -> continue, 2 -> NA, 3 -> retired
     address[] activePlayers;
     uint128 numberActivePlayers = 0;
     mapping(int256 => int256) appearedCards;
     uint128 round = 0;
     bool gameStarted = false;
+    address owner;
+    
+    modifier checkActive {
+        for (uint256 i = 0; i < activePlayers.length; i++) {
+            require (playerDecision[activePlayers[i]] != 2, "There are users choosing if they continue playing");
+        }
+        _;
+    }
     
     constructor(uint256 _price) public{
         price = _price;
+        owner = msg.sender;
     }
     
     function startGame() public {
@@ -27,7 +37,7 @@ contract CryptoJones {
     
     function generateRandomNumber(uint256 min, uint256 max) internal view returns (uint256) {
         //TODO generate a true getRandomNumber function
-        return(min + uint256(keccak256(abi.encodePacked(now)))) % max + min;
+        return 0;
     }
     
     function createPrizeCards() internal {
@@ -82,16 +92,24 @@ contract CryptoJones {
         players[msg.sender] = true;
         playerEarnings[msg.sender] = 0;
         activePlayers.push(msg.sender);
+        playerDecision[msg.sender] = 1;
         numberActivePlayers++;
     }
     
     function retire() public {
         for (uint256 i = 0; i < activePlayers.length; i++) {
             if (msg.sender == activePlayers[i]){
+                playerDecision[msg.sender] = 3;
                 activePlayers[i].transfer(uint256(playerEarnings[activePlayers[i]]));
                 delete activePlayers[i];
                 numberActivePlayers--;
             }
+        }
+    }
+    
+    function keepPlaying() public {
+        if (playerDecision[msg.sender] == 2) {
+            playerDecision[msg.sender] = 1;
         }
     }
     
@@ -101,27 +119,39 @@ contract CryptoJones {
                 playerEarnings[activePlayers[i]] = 0;
             }
         }
+        owner.transfer(address(this).balance);
     }
     
-    function splitPrize (int256 prize) internal {
+    function splitPrizeAndSetDecision (int256 prize) internal {
         int256 amountToTransfer = int256(prize/numberActivePlayers);
         for (uint256 i = 0; i < activePlayers.length; i++) {
             if (activePlayers[i] != 0) {
                 playerEarnings[activePlayers[i]] = playerEarnings[activePlayers[i]] + amountToTransfer;
+                playerDecision[activePlayers[i]] = 2;
             }
         }
     }
     
-    function drawCard() public returns (int256) {
+    function resetRound () private {
+        for (uint256 i = 0; i < activePlayers.length; i++) {
+            if (activePlayers[i] != 0) {
+                playerDecision[activePlayers[i]] = 2;
+            }
+        }
+    }
+    
+    function drawCard() public checkActive returns (int256) {
         //TODO instead of create the desk randomly, extract card randomly
         int256 card = desk[round];
         if (card < 0 ){
             appearedCards[card]++;
             if (appearedCards[card] == 3) {
                 finishGame();
+            } else {
+                resetRound();
             }
         } else {
-            splitPrize(desk[round]);
+            splitPrizeAndSetDecision(desk[round]);
         }
         round++;
         return card;
