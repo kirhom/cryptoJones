@@ -2,10 +2,10 @@ pragma solidity ^0.4.0;
 contract CryptoJones {
     
     uint256 public price;
-    uint256 totalMonsterCards = 10;
+    uint256 totalMonsterCards = 9;
     uint256 totalPrizeCards = 20;
     uint256 totalCards = 30;
-    int256[10] public monsterCards = [-1, -2, -3, -1, -2, -3, -1, -2, -3];
+    int256[9] public monsterCards = [-1, -2, -3, -1, -2, -3, -1, -2, -3];
     int256[20] prizeCards;
     int256[30] public desk;
     mapping(address => bool) players;
@@ -35,18 +35,31 @@ contract CryptoJones {
         shuffle();
     }
     
-    function generateRandomNumber(uint256 min, uint256 max) internal view returns (uint256) {
-        //TODO generate a true getRandomNumber function
+
+    function generateRandomNumber(uint256 min, uint256 max) public view returns (uint256) {
+        if (max - min > 0) {
+            uint256 seed = uint256(keccak256(abi.encodePacked(
+                block.timestamp + block.difficulty +
+                ((uint256(keccak256(abi.encodePacked(block.coinbase)))) / (now)) +
+                block.gaslimit + 
+                ((uint256(keccak256(abi.encodePacked(msg.sender)))) / (now)) +
+                block.number
+            )));
+            return min + (seed - ((seed / (max-min)) * (max-min)));
+        }
         return 0;
     }
     
-    function createPrizeCards() internal {
+    function createPrizeCards() public {
         uint256 totalPrize = address(this).balance;
+        uint256 maxPrize = 0;
+        uint256 minPrize = 0;
+        uint256 randomNumber = 0;
         for (uint256 i = 0; i < prizeCards.length; i++) {
             if (totalPrizeCards != 1) {
-                uint256 maxPrize = totalPrize/totalPrizeCards;
-                uint256 minPrize = maxPrize/2;
-                uint256 randomNumber = generateRandomNumber(minPrize, maxPrize);
+                maxPrize = totalPrize/totalPrizeCards;
+                minPrize = maxPrize/2;
+                randomNumber = generateRandomNumber(minPrize, maxPrize);
                 prizeCards[i] = int128(randomNumber);
                 totalPrizeCards--;
                 totalPrize = totalPrize - randomNumber;
@@ -56,7 +69,7 @@ contract CryptoJones {
         }
     }
     
-    function shuffle() internal {
+    function shuffle() public {
         require(!gameStarted, "The game has already started");
         uint256 totalCardsLength = desk.length;
         uint256 currentPrizeCardsLength = prizeCards.length;
@@ -64,8 +77,8 @@ contract CryptoJones {
         uint256 randomNumber;
         uint128 i = 0;
         while (i < totalCardsLength) {
-            int256 randomCard;
-            if ((generateRandomNumber(0, 1) == 1 && currentPrizeCardsLength > 0) || (currentMonsterLength == 0)) {
+            int256 randomCard = 0;
+            if ((generateRandomNumber(1, 10) > 5 && currentPrizeCardsLength > 0) || (currentMonsterLength == 0)) {
                 randomNumber = generateRandomNumber(0, currentPrizeCardsLength);
                 randomCard = prizeCards[randomNumber];
                 currentPrizeCardsLength--;
