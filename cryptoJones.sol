@@ -4,10 +4,10 @@ contract CryptoJones {
     uint256 public price;
     uint256 totalMonsterCards = 9;
     uint256 totalPrizeCards = 20;
-    uint256 totalCards = 30;
+    uint256 totalCards = 29;
     int256[9] public monsterCards = [-1, -2, -3, -1, -2, -3, -1, -2, -3];
     int256[20] prizeCards;
-    int256[30] public desk;
+    int256[29] public desk;
     mapping(address => bool) players;
     mapping(address => int256) playerEarnings;
     mapping(address => uint8) playerDecision; //0 -> don't continue, 1 -> continue, 2 -> NA, 3 -> retired
@@ -45,7 +45,7 @@ contract CryptoJones {
                 ((uint256(keccak256(abi.encodePacked(msg.sender)))) / (now)) +
                 block.number
             )));
-            return min + (seed - ((seed / (max-min)) * (max-min)));
+            return min + (seed - ((seed / max) * max));
         }
         return 0;
     }
@@ -78,7 +78,8 @@ contract CryptoJones {
         uint128 i = 0;
         while (i < totalCardsLength) {
             int256 randomCard = 0;
-            if ((generateRandomNumber(1, 10) > 5 && currentPrizeCardsLength > 0) || (currentMonsterLength == 0)) {
+            randomNumber = generateRandomNumber(1, 10);
+            if ((randomNumber > 5 && currentPrizeCardsLength > 0) || (currentMonsterLength == 0)) {
                 randomNumber = generateRandomNumber(0, currentPrizeCardsLength);
                 randomCard = prizeCards[randomNumber];
                 currentPrizeCardsLength--;
