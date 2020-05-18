@@ -2,9 +2,10 @@ pragma solidity ^0.4.0;
 contract CryptoJones {
     
     uint256 public price;
-    uint256 totalMonsterCards = 9;
+    uint256 currentMonsterCards = 9;
     uint256 totalPrizeCards = 20;
-    uint256 totalCards = 29;
+    uint256 remainingCards = 29;
+    uint256 currentPrizeCards = 20;
     int256[9] public monsterCards = [-1, -2, -3, -1, -2, -3, -1, -2, -3];
     int256[20] prizeCards;
     int256[29] public desk;
@@ -25,18 +26,23 @@ contract CryptoJones {
         _;
     }
     
+    modifier notStarted {
+        require(!gameStarted, "The game has already started");
+        _;
+    }
+    
     constructor(uint256 _price) public{
         price = _price;
         owner = msg.sender;
     }
     
     function startGame() public {
+        gameStarted = true;
         createPrizeCards();
-        shuffle();
     }
     
 
-    function generateRandomNumber(uint256 min, uint256 max) public view returns (uint256) {
+    function generateRandomNumber(uint256 min, uint256 max) internal view returns (uint256) {
         if (max - min > 0) {
             uint256 seed = uint256(keccak256(abi.encodePacked(
                 block.timestamp + block.difficulty +
@@ -50,7 +56,7 @@ contract CryptoJones {
         return 0;
     }
     
-    function createPrizeCards() public {
+    function createPrizeCards() internal {
         uint256 totalPrize = address(this).balance;
         uint256 maxPrize = 0;
         uint256 minPrize = 0;
@@ -69,38 +75,11 @@ contract CryptoJones {
         }
     }
     
-    function shuffle() public {
-        require(!gameStarted, "The game has already started");
-        uint256 totalCardsLength = desk.length;
-        uint256 currentPrizeCardsLength = prizeCards.length;
-        uint256 currentMonsterLength = monsterCards.length;
-        uint256 randomNumber;
-        uint128 i = 0;
-        while (i < totalCardsLength) {
-            int256 randomCard = 0;
-            randomNumber = generateRandomNumber(1, 10);
-            if ((randomNumber > 5 && currentPrizeCardsLength > 0) || (currentMonsterLength == 0)) {
-                randomNumber = generateRandomNumber(0, currentPrizeCardsLength);
-                randomCard = prizeCards[randomNumber];
-                currentPrizeCardsLength--;
-                prizeCards[randomNumber] = prizeCards[currentPrizeCardsLength];
-            } else {
-                randomNumber = generateRandomNumber(0, currentMonsterLength);
-                randomCard = monsterCards[randomNumber];
-                currentMonsterLength--;
-                monsterCards[randomNumber] = monsterCards[currentMonsterLength];
-            }
-            desk[i] = randomCard;
-            i++;
-        }
-        gameStarted = true;
-    }
-    
     function contains(address _wallet) private view returns (bool){
         return players[_wallet];
     }
     
-    function joinToGame() payable public{
+    function joinToGame() payable public notStarted{
         if (contains(msg.sender)) { revert("You are already in the game"); }
         if (msg.value != price) { revert("You can't pay that. Check the price and try again"); }
         players[msg.sender] = true;
@@ -146,7 +125,7 @@ contract CryptoJones {
         }
     }
     
-    function resetRound () private {
+    function resetRound () internal {
         for (uint256 i = 0; i < activePlayers.length; i++) {
             if (activePlayers[i] != 0) {
                 playerDecision[activePlayers[i]] = 2;
@@ -155,20 +134,28 @@ contract CryptoJones {
     }
     
     function drawCard() public checkActive returns (int256) {
-        //TODO instead of create the desk randomly, extract card randomly
-        int256 card = desk[round];
-        if (card < 0 ){
-            appearedCards[card]++;
-            if (appearedCards[card] == 3) {
-                finishGame();
+        int256 randomCard = 0;
+        uint256 randomNumber = generateRandomNumber(1, 10);
+        //currentMonsterCards won't be zero
+            if ((randomNumber > 5 && currentPrizeCards > 0) || (currentMonsterCards == 0)) {
+                randomNumber = generateRandomNumber(0, currentPrizeCards);
+                randomCard = prizeCards[randomNumber];
+                currentPrizeCards--;
+                prizeCards[randomNumber] = prizeCards[currentPrizeCards];
+                splitPrizeAndSetDecision(randomCard);
             } else {
-                resetRound();
+                randomNumber = generateRandomNumber(0, currentMonsterCards);
+                randomCard = monsterCards[randomNumber];
+                currentMonsterCards--;
+                monsterCards[randomNumber] = monsterCards[currentMonsterCards];
+                appearedCards[randomCard]++;
+                if (appearedCards[randomCard] == 3) {
+                    finishGame();
+                } else {
+                    resetRound();
+                }
             }
-        } else {
-            splitPrizeAndSetDecision(desk[round]);
-        }
-        round++;
-        return card;
+        return randomCard;
     }
     
     function totalBalance() public view returns (uint) {
