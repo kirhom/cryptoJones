@@ -36,7 +36,7 @@ contract CryptoJones {
         owner = msg.sender;
     }
     
-    function startGame() public {
+    function startGame() public notStarted {
         gameStarted = true;
         createPrizeCards();
     }
@@ -90,6 +90,7 @@ contract CryptoJones {
     }
     
     function retire() public {
+        if (!contains(msg.sender)) { revert("You are not in the game"); }
         for (uint256 i = 0; i < activePlayers.length; i++) {
             if (msg.sender == activePlayers[i]){
                 playerDecision[msg.sender] = 3;
@@ -101,6 +102,7 @@ contract CryptoJones {
     }
     
     function keepPlaying() public {
+        if (!contains(msg.sender)) { revert("You are not in the game"); }
         if (playerDecision[msg.sender] == 2) {
             playerDecision[msg.sender] = 1;
         }
