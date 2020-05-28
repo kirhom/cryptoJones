@@ -42,7 +42,7 @@ contract CryptoJones {
     }
     
 
-    function generateRandomNumber(uint256 min, uint256 max) internal view returns (uint256) {
+    function generateRandomNumber(uint256 min, uint256 max) private view returns (uint256) {
         if (max - min > 0) {
             uint256 seed = uint256(keccak256(abi.encodePacked(
                 block.timestamp + block.difficulty +
@@ -136,6 +136,7 @@ contract CryptoJones {
     }
     
     function drawCard() public checkActive returns (int256) {
+        require(gameStarted, "You can draw without start the game");
         int256 randomCard = 0;
         uint256 randomNumber = generateRandomNumber(1, 10);
         //currentMonsterCards won't be zero
