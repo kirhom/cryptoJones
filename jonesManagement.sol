@@ -9,6 +9,8 @@ contract JonesManagement {
     }
     uint256 public nActiveContracts = 0;
     cryptoJonesContract[] activeContracts;
+    
+
     address administrator;
     
     function createGame(uint256 _price) public returns (address){
@@ -22,6 +24,18 @@ contract JonesManagement {
     
     function getContract(uint256 index) public view returns (address contractAddress, uint256 price) {
         return (activeContracts[index].contractAddress, activeContracts[index].price);
+    }
+    
+    function removeContract(address contractAddress) {
+        if (nActiveContracts > 0) {
+            for (uint256 i = 0; i < nActiveContracts; i++) {
+                if (activeContracts[i].contractAddress == contractAddress) {
+                    nActiveContracts--;
+                    activeContracts[i] = activeContracts[nActiveContracts];
+                    delete activeContracts[nActiveContracts];
+                }
+            }
+        }
     }
     
 }
