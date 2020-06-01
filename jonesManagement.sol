@@ -26,7 +26,8 @@ contract JonesManagement {
         return (activeContracts[index].contractAddress, activeContracts[index].price);
     }
     
-    function removeContract(address contractAddress) {
+    function removeContract(address contractAddress) public {
+        require(msg.sender == administrator, "You cannot do this"); 
         if (nActiveContracts > 0) {
             for (uint256 i = 0; i < nActiveContracts; i++) {
                 if (activeContracts[i].contractAddress == contractAddress) {
