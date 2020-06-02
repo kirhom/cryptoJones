@@ -1,4 +1,6 @@
 pragma solidity ^0.4.0;
+import './jonesManagement.sol';
+
 contract CryptoJones {
     
     uint256 public price;
@@ -18,6 +20,7 @@ contract CryptoJones {
     uint128 round = 0;
     bool gameStarted = false;
     address owner;
+    JonesManagement managementContract;
     
     modifier checkActive {
         for (uint256 i = 0; i < activePlayers.length; i++) {
@@ -31,12 +34,14 @@ contract CryptoJones {
         _;
     }
     
-    constructor(uint256 _price) public{
+    constructor(uint256 _price, address administrator) public{
         price = _price;
-        owner = msg.sender;
+        owner = administrator;
+        managementContract = JonesManagement(msg.sender);
     }
     
     function startGame() public notStarted {
+        require(numberActivePlayers > 0, "You cannot start a game without players");
         gameStarted = true;
         createPrizeCards();
     }
@@ -99,6 +104,9 @@ contract CryptoJones {
                 numberActivePlayers--;
             }
         }
+        if (numberActivePlayers == 0) {
+            finishGame();
+        }
     }
     
     function keepPlaying() public {
@@ -115,6 +123,7 @@ contract CryptoJones {
             }
         }
         owner.transfer(address(this).balance);
+        managementContract.removeContract(address(this));
     }
     
     function splitPrizeAndSetDecision (int256 prize) internal {
